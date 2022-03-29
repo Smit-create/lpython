@@ -314,3 +314,26 @@ def _lpython_imag(x: c64) -> f64:
 @overload
 def _lpython_imag(x: c32) -> f32:
     return _lfortran_caimag(x)
+
+
+# FloorDiv operator (//)
+
+@overload
+def _lpython_floordiv(a: i32, b: i32) -> i32:
+    return int(a/b)
+
+@overload
+def _lpython_floordiv(a: i32, b: i64) -> i64:
+    return int(a/b)
+
+@overload
+def _lpython_floordiv(a: i64, b: i32) -> i64:
+    return int(a/b)
+
+@overload
+def _lpython_floordiv(a: i64, b: i64) -> i64:
+    return int(a/b)
+
+@overload
+def _lpython_floordiv(a: f64, b: f64) -> f64:
+    return floor(int(a/b))
