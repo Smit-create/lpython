@@ -46,6 +46,7 @@ struct PythonIntrinsicProcedures {
             {"complex", {m_builtin, &eval_complex}},
             {"_lpython_imag", {m_builtin, &eval__lpython_imag}},
             {"divmod", {m_builtin, &eval_divmod}},
+            {"_lpython_floordiv", {m_builtin, &eval__lpython_floordiv}}
         };
     }
 
@@ -522,6 +523,58 @@ struct PythonIntrinsicProcedures {
         }
     }
 
+    static ASR::expr_t *eval__lpython_floordiv(Allocator &al, const Location &loc, Vec<ASR::expr_t *> &args) {
+        LFORTRAN_ASSERT(ASRUtils::all_args_evaluated(args));
+        if (args.size() != 2) {
+            throw SemanticError("_lpython_floordiv() takes exactly two arguments (" +
+                std::to_string(args.size()) + " given)", loc);
+        }
+        ASR::expr_t *arg1 = args[0];
+        ASR::expr_t *arg2 = args[1];
+        ASR::ttype_t *arg1_type = ASRUtils::expr_type(arg1);
+        ASR::ttype_t *arg2_type = ASRUtils::expr_type(arg2);
+        if (ASRUtils::is_integer(*arg1_type) && ASRUtils::is_integer(*arg2_type)) {
+            int nkind = ASR::down_cast<ASR::Integer_t>(arg1_type)->m_kind;
+            int dkind = ASR::down_cast<ASR::Integer_t>(arg2_type)->m_kind;
+            ASR::ttype_t *type = nullptr;
+            if (nkind == 4 && dkind == 4) {
+                type = arg1_type;
+                int32_t n = ASR::down_cast<ASR::ConstantInteger_t>(arg1)->m_n;
+                int32_t d = ASR::down_cast<ASR::ConstantInteger_t>(arg2)->m_n;
+                return ASR::down_cast<ASR::expr_t>(make_ConstantInteger_t(al, loc, n/d, type));
+
+            } else {
+                type = ASRUtils::TYPE(ASR::make_Integer_t(al, loc, 8, nullptr, 0));
+                int32_t n = ASR::down_cast<ASR::ConstantInteger_t>(arg1)->m_n;
+                int32_t d = ASR::down_cast<ASR::ConstantInteger_t>(arg2)->m_n;
+                return ASR::down_cast<ASR::expr_t>(make_ConstantInteger_t(al, loc, n/d, type));
+            }
+        } else if ((ASRUtils::is_integer(*arg1_type) || ASRUtils::is_real(*arg1_type))  &&
+                    (ASRUtils::is_integer(*arg1_type) || ASRUtils::is_real(*arg1_type))) {
+            double n = 0, d = 0;
+            ASR::ttype_t *type = ASRUtils::TYPE(ASR::make_Real_t(al, loc, 8, nullptr, 0));
+            if (ASRUtils::is_integer(*arg1_type)) {
+                n = ASR::down_cast<ASR::ConstantInteger_t>(arg1)->m_n;
+            } else {
+                n = ASR::down_cast<ASR::ConstantReal_t>(arg1)->m_r;
+            }
+            if (ASRUtils::is_integer(*arg2_type)) {
+                d = ASR::down_cast<ASR::ConstantInteger_t>(arg1)->m_n;
+            } else {
+                d = ASR::down_cast<ASR::ConstantReal_t>(arg1)->m_r;
+            }
+            ASR::ttype_t *int_type = ASRUtils::TYPE(ASR::make_Integer_t(al, loc, 8, nullptr, 0));
+            ASR::expr_t *tmp = ASR::down_cast<ASR::expr_t>(make_ConstantReal_t(al, loc, n/d, type));
+            tmp = ASR::down_cast<ASR::expr_t>(ASR::make_ImplicitCast_t(
+                al, tmp->base.loc, tmp, ASR::cast_kindType::RealToInteger,
+                int_type, nullptr));
+            return ASR::down_cast<ASR::expr_t>(ASR::make_ImplicitCast_t(
+                al, tmp->base.loc, tmp, ASR::cast_kindType::IntegerToReal,
+                type, nullptr));
+        } else {
+            throw SemanticError("Only integer/real arguments are expected.", loc);
+        }
+    }
     static ASR::expr_t *eval_divmod(Allocator &al, const Location &loc, Vec<ASR::expr_t *> &args) {
         LFORTRAN_ASSERT(ASRUtils::all_args_evaluated(args));
         if (args.size() != 2) {
