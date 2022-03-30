@@ -681,7 +681,8 @@ public:
             fn = llvm::Function::Create(function_type,
                     llvm::Function::ExternalLinkage, runtime_func_name, *module);
         }
-
+        llvm::Value *fmt_ptr = builder->CreateGlobalStringPtr("L, R: (%lf, %lf) (%lf, %lf)\n");
+        printf(context, *module, *builder, {fmt_ptr, left_arg, right_arg});
         llvm::AllocaInst *pleft_arg = builder->CreateAlloca(complex_type,
             nullptr);
 
@@ -691,8 +692,12 @@ public:
         builder->CreateStore(right_arg, pright_arg);
         llvm::AllocaInst *presult = builder->CreateAlloca(complex_type,
             nullptr);
+        llvm::Value *fmt_ptr2 = builder->CreateGlobalStringPtr("Before call PL PR: (%lf, %lf) (%lf, %lf)\n");
+        printf(context, *module, *builder, {fmt_ptr2, pleft_arg, pright_arg});
         std::vector<llvm::Value*> args = {pleft_arg, pright_arg, presult};
         builder->CreateCall(fn, args);
+        llvm::Value *fmt_ptr1 = builder->CreateGlobalStringPtr("After call PL PR Result: (%lf, %lf) (%lf, %lf) (%lf, %lf)\n");
+        printf(context, *module, *builder, {fmt_ptr1, pleft_arg, pright_arg, presult});
         return builder->CreateLoad(presult);
     }
 

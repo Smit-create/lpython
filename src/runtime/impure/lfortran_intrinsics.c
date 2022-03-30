@@ -61,6 +61,7 @@ LFORTRAN_API void _lfortran_complex_add(struct _lfortran_complex* a,
 {
     result->re = a->re + b->re;
     result->im = a->im + b->im;
+    printf("Intrinsic values (%lf,%lf) (%lf,%lf) (%lf,%lf)\n", a->re, a->im, b->re, b->im, result->re, result->im);
 }
 
 LFORTRAN_API void _lfortran_complex_sub(struct _lfortran_complex* a,
